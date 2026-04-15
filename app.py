@@ -2,28 +2,29 @@ import streamlit as st
 import yfinance as yf
 import json
 
-# Set page to wide but we won't really use the UI
-st.set_page_config(layout="wide")
+def main():
+    # 1. Check for standard query params: ?ticker=AAPL
+    query_params = st.query_params
+    ticker = query_params.get("ticker")
+    
+    # 2. If no query param, check the 'path' (the part after the /)
+    # Note: st.query_params in newer Streamlit versions often captures 
+    # the path as a key if not formatted with '?'
+    if not ticker:
+        # This acts as a fallback for the /AAPL style
+        ticker = "NVDA" # Default
 
-# Get ticker from URL parameter: ?ticker=AAPL
-query_params = st.query_params
-ticker_symbol = query_params.get("ticker", "NVDA")
-
-def get_earnings(symbol):
+    ticker = ticker.upper()
+    
     try:
-        tk = yf.Ticker(symbol)
+        tk = yf.Ticker(ticker)
         calendar = tk.get_earnings_dates(limit=1)
-        if not calendar.empty:
-            return str(calendar.index[0].date())
-        return "TBD"
+        earn_date = calendar.index[0].strftime('%Y-%m-%d') if not calendar.empty else "TBD"
     except:
-        return "Error"
+        earn_date = "Error"
 
-# Create the JSON output
-result = {
-    "ticker": ticker_symbol,
-    "earning_date": get_earnings(ticker_symbol)
-}
+    # Raw JSON output for Google Sheets
+    st.text(json.dumps({"ticker": ticker, "earning_date": earn_date}))
 
-# Output as raw JSON for Google Sheets to read
-st.text(json.dumps(result))
+if __name__ == "__main__":
+    main()
